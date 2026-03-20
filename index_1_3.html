@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="The Cogverter by Cognition Records — extract and convert audio from any media file." />
+  <meta name="theme-color" content="#070d1a" />
+  <meta property="og:title" content="The Cogverter" />
+  <meta property="og:type" content="website" />
+  <title>The Cogverter</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js" crossorigin="anonymous"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #ffffff;
+      font-family: 'Space Grotesk', sans-serif;
+      color: #c8d8f0;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app   { min-height: 100vh; padding: 28px 16px 56px; background: #ffffff; }
+    .inner { max-width: 740px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .header { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+    .header-logo { height: 36px; width: 36px; object-fit: contain; display: block; flex-shrink: 0; }
+    .header-logo-fallback {
+      height: 36px; width: 36px; border-radius: 6px; background: #1a3a6e;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #90b8f0; flex-shrink: 0; letter-spacing: -0.5px;
+    }
+    .header h1 { font-size: 22px; font-weight: 700; color: #0f1117; letter-spacing: -0.5px; }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; background: #f1f5f9; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .tab { flex: 1; padding: 8px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; font-family: 'Space Grotesk', sans-serif; cursor: pointer; transition: all .15s; color: #94a3b8; background: transparent; }
+    .tab.active { background: #ffffff; color: #0f1117; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+    .tab:hover:not(.active) { color: #475569; }
+
+    /* ── Drop zone ── */
+    .drop-zone {
+      border: 2px dashed #cbd5e1; border-radius: 10px; padding: 32px;
+      text-align: center; cursor: pointer; transition: all .2s;
+      background: #f8fafc; margin-bottom: 16px;
+    }
+    .drop-zone:hover, .drop-zone.active { border-color: #1a4db3; background: #eff4ff; }
+    .drop-zone svg { width: 32px; height: 32px; margin: 0 auto 8px; color: #94a3b8; display: block; }
+    .drop-zone p   { font-size: 13px; color: #475569; }
+    .drop-zone span { font-size: 11px; color: #94a3b8; }
+
+    /* ── Card ── */
+    .card { background: #ffffff; border-radius: 10px; padding: 16px; margin-bottom: 14px; border: 1px solid #e2e8f0; }
+    .card h3 { font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: .6px; }
+
+    /* ── Info grid ── */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .info-row  { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+    .info-row .lbl { color: #94a3b8; }
+    .info-row .val { color: #1e293b; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+    /* ── Waveform ── */
+    canvas { width: 100%; border-radius: 6px; display: block; user-select: none; }
+    .waveform-wrap { position: relative; }
+    .waveform-controls { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+    .waveform-controls h3 { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .6px; flex: 1; margin-bottom: 0; }
+    .time-row { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: #94a3b8; font-family: 'JetBrains Mono', monospace; }
+    .zoom-badge { font-size: 11px; color: #94a3b8; font-family: 'JetBrains Mono', monospace; }
+
+    /* ── Trim badges ── */
+    .trim-info { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+    .trim-badge { flex: 1; min-width: 80px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; }
+    .trim-badge .tb-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: .4px; }
+    .trim-badge .tb-val   { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: #1a4db3; margin-top: 2px; }
+    .trim-reset { padding: 5px 10px; background: #fff; border: 1px solid #fca5a5; border-radius: 6px; font-size: 11px; color: #dc2626; cursor: pointer; font-family: 'Space Grotesk', sans-serif; transition: all .15s; }
+    .trim-reset:hover { background: #fef2f2; }
+
+    /* ── Gain ── */
+    .gain-row { display: flex; align-items: center; gap: 12px; }
+    .gain-slider-wrap { flex: 1; }
+    .gain-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 5px; border-radius: 3px; outline: none; cursor: pointer; }
+    .gain-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #1a4db3; cursor: pointer; border: 2px solid #fff; box-shadow: 0 0 0 1px #cbd5e1; }
+    .gain-slider::-moz-range-thumb     { width: 16px; height: 16px; border-radius: 50%; background: #1a4db3; cursor: pointer; border: 2px solid #fff; }
+    .gain-value { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #1a4db3; min-width: 60px; text-align: right; }
+    .gain-presets { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .gain-preset-btn { padding: 4px 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; font-size: 11px; color: #64748b; cursor: pointer; transition: all .15s; font-family: 'Space Grotesk', sans-serif; }
+    .gain-preset-btn:hover  { border-color: #1a4db3; color: #1e293b; }
+    .gain-preset-btn.active { border-color: #1a4db3; color: #1a4db3; background: #eff4ff; }
+    .normalize-btn { padding: 6px 14px; background: #fff; border: 1px solid #1a4db3; border-radius: 6px; font-size: 12px; color: #1a4db3; cursor: pointer; font-family: 'Space Grotesk', sans-serif; font-weight: 600; transition: all .15s; white-space: nowrap; }
+    .normalize-btn:hover { background: #eff4ff; }
+
+    /* ── Settings ── */
+    .settings-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .settings-header h3 { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 0; }
+    .conversion-tag { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .conversion-tag .from { color: #d97706; }
+    .conversion-tag .to   { color: #1a4db3; }
+    .settings-grid   { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .settings-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .4px; }
+    select, input[type="text"] {
+      width: 100%; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px;
+      padding: 7px 10px; font-size: 12px; color: #1e293b;
+      font-family: 'Space Grotesk', sans-serif; outline: none; transition: border-color .15s; -webkit-appearance: none;
+    }
+    select:focus, input[type="text"]:focus { border-color: #1a4db3; }
+    select option { background: #fff; color: #1e293b; }
+    .field-disabled label { color: #cbd5e1; }
+    .field-disabled select { color: #cbd5e1; border-color: #f1f5f9; background: #f8fafc; cursor: not-allowed; pointer-events: none; }
+    .field-disabled .disabled-note { font-size: 10px; color: #cbd5e1; margin-top: 4px; font-style: italic; }
+
+    /* ── Buttons ── */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; transition: all .15s; font-family: 'Space Grotesk', sans-serif; }
+    .btn-icon  { padding: 6px; border-radius: 6px; border: 1px solid #e2e8f0; cursor: pointer; transition: all .15s; background: #f1f5f9; color: #64748b; }
+    .btn-icon:hover { background: #e2e8f0; color: #1e293b; }
+    .btn-blue  { background: #1a4db3; color: #fff; } .btn-blue:hover  { background: #1240a0; }
+    .btn-stop  { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; } .btn-stop:hover { background: #e2e8f0; }
+    .btn-pause { background: #dc2626; color: #fff; } .btn-pause:hover { background: #b91c1c; }
+    .btn-save  { background: #1a4db3; color: #fff; } .btn-save:hover  { background: #1240a0; }
+    .btn-main  { width: 100%; justify-content: center; padding: 12px; font-size: 14px; border-radius: 8px; }
+    .btn:disabled { background: #f1f5f9 !important; color: #cbd5e1 !important; cursor: not-allowed; border: 1px solid #e2e8f0; }
+    .star-btn  { background: #f1f5f9; border: 1px solid #e2e8f0; cursor: pointer; padding: 6px; border-radius: 6px; color: #94a3b8; transition: all .15s; }
+    .star-btn:hover  { background: #e2e8f0; }
+    .star-btn.active { background: #fef3c7; border-color: #d97706; color: #d97706; }
+    .actions { display: flex; gap: 10px; }
+    .actions .btn-main { flex: 1; }
+
+    .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Favourites ── */
+    .favorites { margin-top: 12px; }
+    .fav-tags  { display: flex; flex-wrap: wrap; gap: 6px; }
+    .fav-tag   { padding: 4px 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; font-size: 11px; color: #64748b; cursor: pointer; transition: all .15s; font-family: 'Space Grotesk', sans-serif; }
+    .fav-tag:hover { border-color: #1a4db3; color: #1e293b; }
+
+    /* ── Batch ── */
+    .batch-list { display: flex; flex-direction: column; gap: 8px; }
+    .batch-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+    .batch-item-info { flex: 1; min-width: 0; }
+    .batch-item-name { font-size: 12px; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .batch-item-meta { font-size: 11px; color: #94a3b8; font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+    .batch-status { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+    .status-pending    { background: #f1f5f9; color: #94a3b8; }
+    .status-converting { background: #eff4ff; color: #1a4db3; animation: pulse 1s ease-in-out infinite; }
+    .status-done  { background: #eff4ff; color: #1a4db3; }
+    .status-error { background: #fef2f2; color: #dc2626; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+    .batch-remove { background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 4px; border-radius: 4px; transition: all .15s; font-size: 14px; line-height: 1; }
+    .batch-remove:hover { color: #dc2626; background: #fef2f2; }
+    .batch-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .batch-clear { padding: 8px 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12px; color: #94a3b8; cursor: pointer; font-family: 'Space Grotesk', sans-serif; font-weight: 600; transition: all .15s; }
+    .batch-clear:hover { border-color: #fca5a5; color: #dc2626; }
+    .batch-progress { height: 3px; background: #f1f5f9; border-radius: 2px; margin-top: 10px; overflow: hidden; }
+    .batch-progress-bar { height: 100%; background: #1a4db3; border-radius: 2px; transition: width .3s; }
+    .empty-batch { text-align: center; padding: 32px; color: #cbd5e1; font-size: 13px; }
+
+    .footer { text-align: center; margin-top: 32px; font-size: 11px; color: #cbd5e1; }
+
+    @media (max-width: 520px) {
+      .settings-grid { grid-template-columns: 1fr 1fr; }
+      .settings-grid-2 { grid-template-columns: 1fr; }
+      .info-grid { grid-template-columns: 1fr; }
+      .gain-row { flex-wrap: wrap; }
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useRef, useEffect, useCallback } = React;
+
+/* ── Icons ── */
+const UpIcon      = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
+const PlayIcon    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>;
+const PauseIcon   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>;
+const StopIcon    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18"/></svg>;
+const DlIcon      = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+const StarIcon    = ({f}) => <svg width="14" height="14" viewBox="0 0 24 24" fill={f?"currentColor":"none"} stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+
+/* ── Helpers ── */
+const fmtTime = s => `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+const fmtMs   = s => `${Math.floor(s/60)}:${(s%60).toFixed(2).padStart(5,'0')}`;
+const fmtSize = b => (b/(1024*1024)).toFixed(2)+' MB';
+const isMedia  = f => f.type.startsWith('audio/') || f.type.startsWith('video/');
+const LOSSLESS = ['wav','flac','aiff'];
+const getSourceLabel = f => {
+  const t=f.type||'', ext=t.split('/')[1]?.toUpperCase()||f.name.split('.').pop().toUpperCase()||'MEDIA';
+  return t.startsWith('video/')?`${ext} (video)`:ext;
+};
+
+/* ── WAV encoder ── */
+function bufferToWave(buffer, gainVal, trimStart, trimEnd, sampleRate) {
+  const sr=parseInt(sampleRate), s0=Math.floor(trimStart*sr), s1=Math.floor(trimEnd*sr);
+  const len=Math.max(1,s1-s0), ab=new ArrayBuffer(len*buffer.numberOfChannels*2+44);
+  const view=new DataView(ab); let pos=0;
+  const u16=d=>{view.setUint16(pos,d,true);pos+=2;}, u32=d=>{view.setUint32(pos,d,true);pos+=4;};
+  u32(0x46464952);u32(ab.byteLength-8);u32(0x45564157);u32(0x20746d66);u32(16);u16(1);u16(buffer.numberOfChannels);
+  u32(sr);u32(sr*2*buffer.numberOfChannels);u16(buffer.numberOfChannels*2);u16(16);u32(0x61746164);u32(len*buffer.numberOfChannels*2);
+  const ch=[];for(let i=0;i<buffer.numberOfChannels;i++)ch.push(buffer.getChannelData(i));
+  for(let i=0;i<len;i++)for(let c=0;c<buffer.numberOfChannels;c++){
+    let s=Math.max(-1,Math.min(1,(ch[c][s0+i]||0)*gainVal));
+    view.setInt16(pos,s<0?s*0x8000:s*0x7FFF,true);pos+=2;
+  }
+  return new Blob([ab],{type:'audio/wav'});
+}
+
+/* ═══════════════════════════════════════════
+   SINGLE FILE TAB
+═══════════════════════════════════════════ */
+function SingleTab() {
+  const [file,setFile]               = useState(null);
+  const [drag,setDrag]               = useState(false);
+  const [audioCtx,setAudioCtx]       = useState(null);
+  const [audioBuf,setAudioBuf]       = useState(null);
+  const [waveData,setWaveData]       = useState([]);   // 2000-sample normalised array
+  const [dur,setDur]                 = useState(0);
+  const [converting,setConverting]   = useState(false);
+  const [convertedUrl,setConvertedUrl]=useState(null);
+  const [isPlaying,setIsPlaying]     = useState(false);
+  const [curTime,setCurTime]         = useState(0);
+  const [zoom,setZoom]               = useState(1);      // 1× to 50×
+  const [viewStart,setViewStart]     = useState(0);      // fraction 0–1 of total, left edge of view
+  const [outputName,setOutputName]   = useState('converted');
+  const [namePreset,setNamePreset]   = useState('custom');
+  const [favorites,setFavorites]     = useState([]);
+  const [settings,setSettings]       = useState({outputFormat:'wav',bitrate:'320',sampleRate:'44100'});
+  const [trimStart,setTrimStart]     = useState(0);
+  const [trimEnd,setTrimEnd]         = useState(0);
+  const [gain,setGain]               = useState(1.0);
+  const [cursor,setCursor]           = useState('crosshair');
+
+  const canvasRef    = useRef(null);
+  const fileInputRef = useRef(null);
+  const srcRef       = useRef(null);
+  const startTimeRef = useRef(0);
+  const animRef      = useRef(null);
+  const draggingRef  = useRef(null); // 'start'|'end'|null
+
+  // live refs for event handlers
+  const stateRef = useRef({});
+  stateRef.current = { dur, zoom, viewStart, trimStart, trimEnd, isPlaying };
+
+  useEffect(()=>()=>{ if(animRef.current) cancelAnimationFrame(animRef.current); try{srcRef.current?.stop();}catch(e){} },[]);
+
+  const FORMATS      = [{value:'wav',label:'WAV'},{value:'mp3',label:'MP3'},{value:'aiff',label:'AIFF'},{value:'flac',label:'FLAC'}];
+  const BITRATES     = ['128','192','256','320'];
+  const SAMPLERATES  = ['44100','48000','96000'];
+  const NAME_PRESETS = [{value:'custom',label:'Custom'},{value:'original',label:'Original Name'},{value:'prefix_date',label:'Prefix + Date'},{value:'prefix_format',label:'Prefix + Format'}];
+  const bitrateDisabled = LOSSLESS.includes(settings.outputFormat);
+
+  const genName=(p,n)=>{
+    const base=n?n.replace(/\.[^/.]+$/,''):'converted', date=new Date().toISOString().split('T')[0];
+    if(p==='original')return base; if(p==='prefix_date')return`${base}_${date}`; if(p==='prefix_format')return`${base}_${settings.outputFormat}`; return outputName;
+  };
+
+  /* ── Load file ── */
+  const handleFile = async f => {
+    if(!isMedia(f)){alert('Please drop an audio or video file.');return;}
+    setFile(f);setConvertedUrl(null);setIsPlaying(false);setCurTime(0);
+    setOutputName(f.name.replace(/\.[^/.]+$/,''));setGain(1.0);setZoom(1);setViewStart(0);
+    try {
+      const ctx=new(window.AudioContext||window.webkitAudioContext)();setAudioCtx(ctx);
+      const buf=await ctx.decodeAudioData(await f.arrayBuffer());
+      setAudioBuf(buf);setDur(buf.duration);setTrimStart(0);setTrimEnd(buf.duration);
+      // build 2000-point waveform
+      const raw=buf.getChannelData(0), N=2000, bs=Math.floor(raw.length/N), d=[];
+      for(let i=0;i<N;i++){let s=0;for(let j=0;j<bs;j++)s+=Math.abs(raw[bs*i+j]);d.push(s/bs);}
+      const m=Math.pow(Math.max(...d),-1); setWaveData(d.map(n=>n*m));
+    } catch(e){alert('Could not decode audio from this file.');}
+  };
+
+  /* ── Clamp viewStart so we never scroll past the end ── */
+  const clampView = (vs, zm, d) => {
+    const viewFraction = 1/zm;
+    return Math.max(0, Math.min(vs, 1-viewFraction));
+  };
+
+  /* ── Draw ── */
+  useEffect(()=>{ if(waveData.length&&canvasRef.current) drawWaveform(); },[waveData,curTime,zoom,viewStart,trimStart,trimEnd,dur]);
+
+  const drawWaveform = () => {
+    const canvas=canvasRef.current; if(!canvas) return;
+    const ctx=canvas.getContext('2d'), W=canvas.width, H=canvas.height;
+    ctx.clearRect(0,0,W,H); ctx.fillStyle='#f8fafc'; ctx.fillRect(0,0,W,H);
+    if(!dur) return;
+
+    const viewFraction = 1/zoom;                     // fraction of total visible
+    const vs = viewStart;                            // left edge fraction
+    const ve = vs + viewFraction;                    // right edge fraction
+
+    // map a time-fraction to canvas X
+    const fracToX = frac => ((frac - vs) / viewFraction) * W;
+
+    // dim regions outside trim
+    const tsF=trimStart/dur, teF=trimEnd/dur;
+    const tsX=fracToX(tsF), teX=fracToX(teF);
+    ctx.fillStyle='rgba(200,50,50,0.07)';
+    if(tsX>0) ctx.fillRect(0,0,Math.min(tsX,W),H);
+    if(teX<W) ctx.fillRect(Math.max(teX,0),0,W-Math.max(teX,0),H);
+
+    // bars — only draw samples in the visible window
+    const iStart = Math.floor(vs * waveData.length);
+    const iEnd   = Math.ceil(ve * waveData.length);
+    const visible = waveData.slice(iStart, iEnd);
+    const bw = W / visible.length;
+
+    visible.forEach((v, i) => {
+      const bh = v * H * 0.85, y = (H-bh)/2;
+      const sampleFrac = (iStart+i) / waveData.length;
+      const inTrim = sampleFrac >= tsF && sampleFrac <= teF;
+      // darker royal blue waveform — distinct in/out of trim
+      ctx.fillStyle = inTrim ? '#1e4a9a' : '#0e2458';
+      ctx.fillRect(i*bw, y, Math.max(bw-0.5,0.5), bh);
+    });
+
+    // playhead
+    const playFrac = dur>0 ? curTime/dur : 0;
+    if(playFrac>=vs && playFrac<=ve){
+      const px = fracToX(playFrac);
+      ctx.strokeStyle='#f0a020'; ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,H);ctx.stroke();
+    }
+
+    // trim handles — only if in view
+    const drawHandle = (frac, dir) => {
+      const x = fracToX(frac);
+      if(x<-20||x>W+20) return;
+      ctx.strokeStyle='#cc3030'; ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+      ctx.fillStyle='#cc3030';
+      ctx.beginPath();
+      if(dir==='right'){ ctx.moveTo(x,2);ctx.lineTo(x+13,9);ctx.lineTo(x,18); }
+      else              { ctx.moveTo(x,2);ctx.lineTo(x-13,9);ctx.lineTo(x,18); }
+      ctx.closePath();ctx.fill();
+    };
+    drawHandle(tsF,'right');
+    drawHandle(teF,'left');
+  };
+
+  /* ── Scroll wheel zoom (centred on mouse) ── */
+  useEffect(()=>{
+    const canvas = canvasRef.current; if(!canvas) return;
+    const onWheel = e => {
+      e.preventDefault();
+      const {dur,zoom,viewStart} = stateRef.current;
+      if(!dur) return;
+      const rect=canvas.getBoundingClientRect();
+      const mouseFrac = (e.clientX-rect.left)/rect.width;            // 0-1 within canvas
+      const mouseTimeFrac = viewStart + mouseFrac*(1/zoom);           // fraction of total at mouse
+      const factor = e.deltaY<0 ? 1.25 : 0.8;
+      const newZoom = Math.max(1, Math.min(50, zoom*factor));
+      const newViewFraction = 1/newZoom;
+      // keep mouseTimeFrac under mouse
+      let newVS = mouseTimeFrac - mouseFrac*newViewFraction;
+      newVS = Math.max(0, Math.min(1-newViewFraction, newVS));
+      setZoom(newZoom);
+      setViewStart(newVS);
+    };
+    canvas.addEventListener('wheel', onWheel, {passive:false});
+    return ()=>canvas.removeEventListener('wheel', onWheel);
+  }, [waveData.length > 0]);
+
+  /* ── Canvas pointer interaction ── */
+  const SNAP = 12;
+  const clientXtoFrac = clientX => {
+    const rect=canvasRef.current.getBoundingClientRect();
+    const {zoom,viewStart}=stateRef.current;
+    return viewStart + ((clientX-rect.left)/rect.width)*(1/zoom);
+  };
+  const nearHandle = clientX => {
+    const {dur,zoom,viewStart,trimStart,trimEnd}=stateRef.current;
+    if(!dur) return null;
+    const rect=canvasRef.current.getBoundingClientRect(), W=rect.width;
+    const fracToCanvasX = frac => ((frac-viewStart)*zoom)*W+rect.left;
+    const tsX=fracToCanvasX(trimStart/dur), teX=fracToCanvasX(trimEnd/dur);
+    if(Math.abs(clientX-tsX)<SNAP) return 'start';
+    if(Math.abs(clientX-teX)<SNAP) return 'end';
+    return null;
+  };
+  const onMouseDown = e => {
+    const h=nearHandle(e.clientX);
+    if(h){draggingRef.current=h;return;}
+    const {dur,trimStart:ts,trimEnd:te}=stateRef.current;
+    const t=Math.max(0,Math.min(dur,clientXtoFrac(e.clientX)*dur));
+    const clamped=Math.max(ts,Math.min(t,te));
+    setCurTime(clamped);
+    if(stateRef.current.isPlaying&&srcRef.current){try{srcRef.current.stop();}catch(e){}setIsPlaying(false);}
+  };
+  const onMouseMove = e => {
+    const h=nearHandle(e.clientX);
+    setCursor(draggingRef.current||h?'ew-resize':'crosshair');
+    if(!draggingRef.current) return;
+    const {dur}=stateRef.current;
+    const t=Math.max(0,Math.min(dur,clientXtoFrac(e.clientX)*dur));
+    if(draggingRef.current==='start') setTrimStart(prev=>Math.min(Math.max(0,t),trimEnd-0.05));
+    if(draggingRef.current==='end')   setTrimEnd(prev=>Math.max(Math.min(dur,t),trimStart+0.05));
+  };
+  const onMouseUp    = ()=>{draggingRef.current=null;};
+  const onMouseLeave = ()=>{draggingRef.current=null;setCursor('crosshair');};
+
+  /* ── Playback ── */
+  const updateTime = () => {
+    if(audioCtx){
+      const el=audioCtx.currentTime-startTimeRef.current; setCurTime(el);
+      if(el>=Math.min(trimEnd,dur)) handleStop();
+      else animRef.current=requestAnimationFrame(updateTime);
+    }
+  };
+  const handlePlay = async () => {
+    if(!audioCtx||!audioBuf) return;
+    if(audioCtx.state==='suspended') await audioCtx.resume();
+    const src=audioCtx.createBufferSource(), gn=audioCtx.createGain();
+    src.buffer=audioBuf; gn.gain.value=gain; src.connect(gn); gn.connect(audioCtx.destination);
+    const at=Math.max(curTime,trimStart); src.start(0,at);
+    srcRef.current=src; startTimeRef.current=audioCtx.currentTime-at; setIsPlaying(true);
+    src.onended=()=>setIsPlaying(false); animRef.current=requestAnimationFrame(updateTime);
+  };
+  const handlePause = ()=>{ try{srcRef.current?.stop();}catch(e){} setIsPlaying(false); if(animRef.current)cancelAnimationFrame(animRef.current); };
+  const handleStop  = ()=>{ handlePause(); setCurTime(trimStart); };
+
+  /* ── Auto-scroll view to follow playhead ── */
+  useEffect(()=>{
+    if(!dur||!isPlaying) return;
+    const frac=curTime/dur, vf=1/zoom;
+    if(frac<viewStart||frac>viewStart+vf){
+      setViewStart(clampView(frac-vf*0.1, zoom, dur));
+    }
+  },[curTime]);
+
+  const normalize = ()=>{
+    if(!audioBuf) return;
+    const raw=audioBuf.getChannelData(0); let peak=0;
+    for(let i=0;i<raw.length;i++) if(Math.abs(raw[i])>peak) peak=Math.abs(raw[i]);
+    if(peak>0) setGain(parseFloat(Math.min(2,1/peak).toFixed(2)));
+  };
+  const handleExport = async ()=>{
+    if(!audioBuf) return; setConverting(true); await new Promise(r=>setTimeout(r,500));
+    try{setConvertedUrl(URL.createObjectURL(bufferToWave(audioBuf,gain,trimStart,trimEnd,settings.sampleRate)));}
+    catch(e){alert('Export error: '+e.message);}
+    setConverting(false);
+  };
+  const toggleFav = ()=>{
+    const cur={format:settings.outputFormat,bitrate:settings.bitrate,sampleRate:settings.sampleRate,namePreset};
+    const ex=favorites.find(f=>f.format===cur.format&&f.bitrate===cur.bitrate&&f.sampleRate===cur.sampleRate);
+    if(ex) setFavorites(favorites.filter(f=>f!==ex));
+    else   setFavorites([...favorites,{...cur,name:`${cur.format.toUpperCase()} ${LOSSLESS.includes(cur.format)?'lossless':cur.bitrate+'k'}`}]);
+  };
+  const isFav   = favorites.some(f=>f.format===settings.outputFormat&&f.bitrate===settings.bitrate&&f.sampleRate===settings.sampleRate);
+  const curName = namePreset==='custom'?outputName:genName(namePreset,file?.name);
+  const gainPct = Math.round(gain*100);
+  const gainDb  = gain===0?'-∞':(20*Math.log10(gain)).toFixed(1);
+  const gainFill= `linear-gradient(to right,#1a4db3 0%,#1a4db3 ${Math.min(gain/2,1)*100}%,#e2e8f0 ${Math.min(gain/2,1)*100}%,#e2e8f0 100%)`;
+  const zoomLabel = zoom<10?zoom.toFixed(2)+'×':Math.round(zoom)+'×';
+
+  return (<>
+    <div className={`drop-zone ${drag?'active':''}`}
+      onDragEnter={e=>{e.preventDefault();e.stopPropagation();setDrag(true);}}
+      onDragLeave={e=>{e.preventDefault();e.stopPropagation();setDrag(false);}}
+      onDragOver={e=>{e.preventDefault();e.stopPropagation();}}
+      onDrop={e=>{e.preventDefault();e.stopPropagation();setDrag(false);if(e.dataTransfer.files?.[0])handleFile(e.dataTransfer.files[0]);}}
+      onClick={()=>fileInputRef.current?.click()}>
+      <input ref={fileInputRef} type="file" accept="audio/*,video/*" className="hidden" onChange={e=>e.target.files?.[0]&&handleFile(e.target.files[0])}/>
+      <UpIcon/>
+      <p>{file?file.name:'Drop any audio or video file'}</p>
+      <span>MP3, WAV, FLAC, AIFF, MP4, MOV, MKV, AAC, OGG…</span>
+    </div>
+
+    {file && <>
+      <div className="card"><h3>Source File</h3><div className="info-grid">
+        {[['Filename',file.name],['Size',fmtSize(file.size)],['Source',getSourceLabel(file)],['Duration',fmtTime(dur)],
+          ['Sample Rate',audioBuf?`${(audioBuf.sampleRate/1000).toFixed(1)} kHz`:'—'],
+          ['Channels',audioBuf?.numberOfChannels===2?'Stereo':audioBuf?.numberOfChannels===1?'Mono':'—'],
+          ['Bit Depth','16-bit'],['Samples',audioBuf?audioBuf.length.toLocaleString():'—']
+        ].map(([l,v])=><div className="info-row" key={l}><span className="lbl">{l}</span><span className="val">{v}</span></div>)}
+      </div></div>
+
+      <div className="card">
+        <div className="waveform-controls">
+          <h3>Waveform &amp; Trim</h3>
+          <span className="zoom-badge">{zoomLabel}</span>
+          <button className={`btn ${isPlaying?'btn-pause':'btn-blue'}`} onClick={isPlaying?handlePause:handlePlay}>{isPlaying?<PauseIcon/>:<PlayIcon/>}{isPlaying?'Pause':'Play'}</button>
+          <button className="btn btn-stop" onClick={handleStop}><StopIcon/>Stop</button>
+        </div>
+        <canvas
+          ref={canvasRef} width={1200} height={110}
+          style={{cursor}}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseLeave}
+        />
+        <div className="time-row">
+          <span>{fmtMs(curTime)}</span>
+          <span>Scroll to zoom · Drag red handles to trim</span>
+          <span>{fmtMs(dur)}</span>
+        </div>
+        <div className="trim-info">
+          <div className="trim-badge"><div className="tb-label">Trim Start</div><div className="tb-val">{fmtMs(trimStart)}</div></div>
+          <div className="trim-badge"><div className="tb-label">Trim End</div><div className="tb-val">{fmtMs(trimEnd)}</div></div>
+          <div className="trim-badge"><div className="tb-label">Length</div><div className="tb-val">{fmtMs(trimEnd-trimStart)}</div></div>
+          <button className="trim-reset" onClick={()=>{setTrimStart(0);setTrimEnd(dur);}}>Reset</button>
+        </div>
+      </div>
+
+      <div className="card"><h3>Volume / Gain</h3>
+        <div className="gain-row">
+          <div className="gain-slider-wrap">
+            <input type="range" className="gain-slider" min="0" max="2" step="0.01" value={gain} style={{background:gainFill}} onChange={e=>setGain(parseFloat(e.target.value))}/>
+          </div>
+          <div className="gain-value">{gainPct}%<span style={{fontSize:10,color:'#3d6099',display:'block',textAlign:'right'}}>{gainDb} dB</span></div>
+          <button className="normalize-btn" onClick={normalize}>Auto-Normalize</button>
+        </div>
+        <div className="gain-presets">
+          {[{label:'-6 dB',v:0.5},{label:'0 dB',v:1.0},{label:'+3 dB',v:1.41},{label:'+6 dB',v:2.0}].map(p=>(
+            <button key={p.label} className={`gain-preset-btn ${Math.abs(gain-p.v)<0.02?'active':''}`} onClick={()=>setGain(p.v)}>{p.label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="settings-header">
+          <div>
+            <h3>Output Settings</h3>
+            <div className="conversion-tag">
+              <span className="from">{getSourceLabel(file)}</span><span> → </span>
+              <span className="to">{settings.outputFormat.toUpperCase()}</span>
+            </div>
+          </div>
+          <button className={`star-btn ${isFav?'active':''}`} onClick={toggleFav} title="Save as favourite"><StarIcon f={isFav}/></button>
+        </div>
+        <div className="settings-grid">
+          <div><label>Format</label>
+            <select value={settings.outputFormat} onChange={e=>setSettings({...settings,outputFormat:e.target.value})}>
+              {FORMATS.map(f=><option key={f.value} value={f.value}>{f.label}</option>)}
+            </select>
+          </div>
+          <div className={bitrateDisabled?'field-disabled':''}>
+            <label>Bitrate (kbps)</label>
+            <select value={settings.bitrate} disabled={bitrateDisabled} onChange={e=>setSettings({...settings,bitrate:e.target.value})}>
+              {BITRATES.map(b=><option key={b} value={b}>{b}</option>)}
+            </select>
+            {bitrateDisabled&&<div className="disabled-note">N/A for lossless</div>}
+          </div>
+          <div><label>Sample Rate</label>
+            <select value={settings.sampleRate} onChange={e=>setSettings({...settings,sampleRate:e.target.value})}>
+              {SAMPLERATES.map(s=><option key={s} value={s}>{(parseInt(s)/1000).toFixed(1)} kHz</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="settings-grid-2">
+          <div><label>Filename Preset</label>
+            <select value={namePreset} onChange={e=>{setNamePreset(e.target.value);if(e.target.value!=='custom')setOutputName(genName(e.target.value,file?.name));}}>
+              {NAME_PRESETS.map(p=><option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+          </div>
+          <div><label>Output Filename</label>
+            <input type="text" value={curName} onChange={e=>{setOutputName(e.target.value);setNamePreset('custom');}} placeholder="output"/>
+          </div>
+        </div>
+        {favorites.length>0&&<div className="favorites"><label>Favourites</label><div className="fav-tags">
+          {favorites.map((fav,i)=><button key={i} className="fav-tag" onClick={()=>{setSettings({outputFormat:fav.format,bitrate:fav.bitrate,sampleRate:fav.sampleRate});setNamePreset(fav.namePreset);}}>{fav.name}</button>)}
+        </div></div>}
+      </div>
+
+      {/* Estimated output info */}
+      {audioBuf && (() => {
+        const trimLen   = trimEnd - trimStart;
+        const sr        = parseInt(settings.sampleRate);
+        const channels  = audioBuf.numberOfChannels;
+        const fmt       = settings.outputFormat;
+        const bitrate   = parseInt(settings.bitrate);
+
+        // size estimates
+        let estBytes;
+        if (fmt === 'wav' || fmt === 'aiff') {
+          estBytes = trimLen * sr * channels * 2; // 16-bit PCM
+        } else if (fmt === 'flac') {
+          estBytes = trimLen * sr * channels * 2 * 0.55; // ~55% of PCM typical
+        } else {
+          // mp3: bitrate kbps
+          estBytes = (bitrate * 1000 / 8) * trimLen;
+        }
+        const estMB   = estBytes / (1024 * 1024);
+        const estSize = estMB >= 1 ? estMB.toFixed(2)+' MB' : (estBytes/1024).toFixed(0)+' KB';
+
+        // original size for comparison
+        const origBytes = audioBuf.length * channels * 2;
+        const ratio = ((estBytes / origBytes) * 100).toFixed(0);
+
+        const outSR   = (sr/1000).toFixed(1)+' kHz';
+        const outCh   = channels === 2 ? 'Stereo' : 'Mono';
+        const outBD   = fmt === 'mp3' ? `${bitrate} kbps` : '16-bit PCM';
+        const outFmt  = fmt.toUpperCase();
+        const outDur  = fmtTime(trimLen);
+        const lossy   = fmt === 'mp3';
+
+        return (
+          <div className="card" style={{marginBottom:14}}>
+            <h3>Estimated Output</h3>
+            <div className="info-grid">
+              {[
+                ['Format',     outFmt],
+                ['Est. Size',  estSize],
+                ['Duration',   outDur],
+                ['Size vs src',`~${ratio}%`],
+                ['Sample Rate',outSR],
+                ['Channels',   outCh],
+                ['Encoding',   outBD],
+                ['Lossless',   lossy ? 'No' : 'Yes'],
+              ].map(([l,v])=>(
+                <div className="info-row" key={l}>
+                  <span className="lbl">{l}</span>
+                  <span className="val" style={l==='Lossless'?{color: lossy?'#dc2626':'#1a4db3'}:{}}>{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      <div className="actions">
+        <button className="btn btn-blue btn-main" onClick={handleExport} disabled={converting}>
+          {converting?<><div className="spinner"/>Extracting…</>:`Extract to ${settings.outputFormat.toUpperCase()}`}
+        </button>
+        {convertedUrl&&<a href={convertedUrl} download={`${curName}.${settings.outputFormat}`} className="btn btn-save btn-main" style={{textDecoration:'none'}}><DlIcon/>Download {settings.outputFormat.toUpperCase()}</a>}
+      </div>
+    </>}
+  </>);
+}
+
+/* ═══════════════════════════════════════════
+   BATCH TAB
+═══════════════════════════════════════════ */
+function BatchTab() {
+  const [items,setItems]       = useState([]);
+  const [drag,setDrag]         = useState(false);
+  const [running,setRunning]   = useState(false);
+  const [settings,setSettings] = useState({outputFormat:'wav',bitrate:'320',sampleRate:'44100'});
+  const fileInputRef = useRef(null);
+  const FORMATS     = [{value:'wav',label:'WAV'},{value:'mp3',label:'MP3'},{value:'aiff',label:'AIFF'},{value:'flac',label:'FLAC'}];
+  const BITRATES    = ['128','192','256','320'];
+  const SAMPLERATES = ['44100','48000','96000'];
+  const bitrateDisabled = LOSSLESS.includes(settings.outputFormat);
+
+  const addFiles=files=>{
+    const n=Array.from(files).filter(isMedia).map(f=>({id:Math.random().toString(36).slice(2),file:f,status:'pending',url:null}));
+    if(!n.length){alert('No supported media files found.');return;} setItems(prev=>[...prev,...n]);
+  };
+  const removeItem=id=>setItems(prev=>prev.filter(i=>i.id!==id));
+  const processAll=async()=>{
+    const pending=items.filter(i=>i.status==='pending'); if(!pending.length)return; setRunning(true);
+    for(const item of pending){
+      setItems(prev=>prev.map(i=>i.id===item.id?{...i,status:'converting'}:i));
+      try{
+        const ctx=new(window.AudioContext||window.webkitAudioContext)();
+        const buf=await ctx.decodeAudioData(await item.file.arrayBuffer());
+        const url=URL.createObjectURL(bufferToWave(buf,1.0,0,buf.duration,settings.sampleRate));
+        setItems(prev=>prev.map(i=>i.id===item.id?{...i,status:'done',url}:i)); await ctx.close();
+      }catch(e){setItems(prev=>prev.map(i=>i.id===item.id?{...i,status:'error'}:i));}
+      await new Promise(r=>setTimeout(r,300));
+    }
+    setRunning(false);
+  };
+  const doneCount=items.filter(i=>i.status==='done').length;
+  const progress=items.length>0?(doneCount/items.length)*100:0;
+
+  return(<>
+    <div className={`drop-zone ${drag?'active':''}`}
+      onDragEnter={e=>{e.preventDefault();e.stopPropagation();setDrag(true);}}
+      onDragLeave={e=>{e.preventDefault();e.stopPropagation();setDrag(false);}}
+      onDragOver={e=>{e.preventDefault();e.stopPropagation();}}
+      onDrop={e=>{e.preventDefault();e.stopPropagation();setDrag(false);if(e.dataTransfer.files?.length)addFiles(e.dataTransfer.files);}}
+      onClick={()=>fileInputRef.current?.click()}>
+      <input ref={fileInputRef} type="file" accept="audio/*,video/*" multiple className="hidden" onChange={e=>e.target.files?.length&&addFiles(e.target.files)}/>
+      <UpIcon/><p>Drop multiple audio or video files</p><span>MP3, WAV, FLAC, AIFF, MP4, MOV, MKV… select as many as you like</span>
+    </div>
+    <div className="card"><h3>Output Settings (applied to all)</h3><div className="settings-grid">
+      <div><label>Format</label>
+        <select value={settings.outputFormat} onChange={e=>setSettings({...settings,outputFormat:e.target.value})}>
+          {FORMATS.map(f=><option key={f.value} value={f.value}>{f.label}</option>)}
+        </select>
+      </div>
+      <div className={bitrateDisabled?'field-disabled':''}>
+        <label>Bitrate (kbps)</label>
+        <select value={settings.bitrate} disabled={bitrateDisabled} onChange={e=>setSettings({...settings,bitrate:e.target.value})}>
+          {BITRATES.map(b=><option key={b} value={b}>{b} kbps</option>)}
+        </select>
+        {bitrateDisabled&&<div className="disabled-note">N/A for lossless</div>}
+      </div>
+      <div><label>Sample Rate</label>
+        <select value={settings.sampleRate} onChange={e=>setSettings({...settings,sampleRate:e.target.value})}>
+          {SAMPLERATES.map(s=><option key={s} value={s}>{(parseInt(s)/1000).toFixed(1)} kHz</option>)}
+        </select>
+      </div>
+    </div></div>
+    <div className="card">
+      <h3>Queue {items.length>0&&`— ${items.length} file${items.length!==1?'s':''}`}</h3>
+      {items.length===0?<div className="empty-batch">No files added yet.</div>:(
+        <div className="batch-list">{items.map(item=>(
+          <div className="batch-item" key={item.id}>
+            <div className="batch-item-info">
+              <div className="batch-item-name">{item.file.name}</div>
+              <div className="batch-item-meta">{fmtSize(item.file.size)} · {getSourceLabel(item.file)} → {settings.outputFormat.toUpperCase()}</div>
+            </div>
+            <span className={`batch-status status-${item.status}`}>
+              {item.status==='pending'&&'Pending'}{item.status==='converting'&&'Extracting…'}{item.status==='done'&&'✓ Done'}{item.status==='error'&&'Error'}
+            </span>
+            {item.status==='done'&&item.url&&<a href={item.url} download={`${item.file.name.replace(/\.[^/.]+$/,'')}.${settings.outputFormat}`} className="btn btn-save" style={{textDecoration:'none',padding:'5px 10px',fontSize:11}}><DlIcon/>Save</a>}
+            {!running&&<button className="batch-remove" onClick={()=>removeItem(item.id)}>✕</button>}
+          </div>
+        ))}</div>
+      )}
+      {items.length>0&&<div className="batch-progress"><div className="batch-progress-bar" style={{width:`${progress}%`}}/></div>}
+      {items.length>0&&<div className="batch-actions">
+        <button className="btn btn-blue btn-main" onClick={processAll} disabled={running||!items.some(i=>i.status==='pending')} style={{flex:2}}>
+          {running?<><div className="spinner"/>Extracting {doneCount}/{items.length}…</>:`Extract All to ${settings.outputFormat.toUpperCase()}`}
+        </button>
+        <button className="batch-clear" disabled={running} onClick={()=>setItems([])}>Clear All</button>
+      </div>}
+    </div>
+  </>);
+}
+
+/* ── Logo ── */
+function Logo(){
+  const [err,setErr]=useState(false);
+  return err
+    ?<div className="header-logo-fallback">CR</div>
+    :<img className="header-logo" src="https://cognitionrecords.github.io/Logos/black_icon_transparent_background.png" alt="Cognition Records" onError={()=>setErr(true)}/>;
+}
+
+/* ── App root ── */
+function App(){
+  const [tab,setTab]=useState('single');
+  return(
+    <div className="app"><div className="inner">
+      <div className="header"><Logo/><h1>The Cogverter</h1></div>
+      <div className="tabs">
+        <button className={`tab ${tab==='single'?'active':''}`} onClick={()=>setTab('single')}>Single File</button>
+        <button className={`tab ${tab==='batch'?'active':''}`} onClick={()=>setTab('batch')}>Batch Convert</button>
+      </div>
+      {tab==='single'?<SingleTab/>:<BatchTab/>}
+      <div className="footer">© Cognition Records</div>
+    </div></div>
+  );
+}
+
+ReactDOM.render(<App/>, document.getElementById('root'));
+</script>
+</body>
+</html>
